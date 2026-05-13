@@ -1,374 +1,244 @@
-# Project Summary and Instructions
+# Seez CRS Technical Test
 
-## What was asked
+Conversational recommender system for the LLM-REDIAL movie domain, exposed through a FastAPI service.
 
-- Build a conversational recommender system using the LLM‑REDIAL dataset (movie domain).
-- Implement at least two LLM-based approaches:
-  - Few-shot learning
-  - RAG (Retrieval-Augmented Generation)
-  - Agent-based system
-  - Multi-agent system
-- Serve the system using FastAPI.
-- Use asynchronous programming for performance and concurrency handling.
-- Include a `requirements.txt`.
-- Follow good engineering practices and professional project structure.
-- Describe 2 prompt changes that improve recommendation accuracy.
+I kept this implementation lightweight so it can be run locally without a GPU, external API keys, or a vector database. The recommendation approaches use TF-IDF retrieval/similarity as the local baseline. In a production version, I would replace the retrieval layer with embeddings + a vector store and use an LLM for response generation and ranking.
 
----
+## What is included
 
-## Did the project fulfill all requirements?
+- Dataset loader for the LLM-REDIAL movie files
+- Few-shot style recommender
+- RAG-style recommender
+- Agent-based recommender
+- Multi-agent recommender
+- FastAPI service with streaming responses
+- `requirements.txt`
+- Instructions to run and verify the endpoints
 
-Yes, all requested requirements were implemented.
-
-| Requirement | Status | Proof |
-|---|---|---|
-| Use LLM-REDIAL dataset | ✅ | Dataset parser implemented in `app/datasets/movie_dataset.py` |
-| Few-shot approach | ✅ | `app/models/fewshot.py` |
-| RAG approach | ✅ | `app/models/rag.py` |
-| Agent-based system | ✅ | `app/agents/agent_system.py` |
-| Multi-agent system | ✅ | `app/multi_agent/orchestrator.py` |
-| FastAPI serving | ✅ | `app/main.py` |
-| Async support | ✅ | `async def` endpoints + streaming responses |
-| Concurrent handling | ✅ | Async generator + Uvicorn event loop |
-| requirements.txt | ✅ | Included |
-| Prompt engineering discussion | ✅ | Documented below |
-| Professional structure | ✅ | Modular directories created |
-
----
-
-# Project Structure
+## Project structure
 
 ```text
 seez-crs/
-├── LICENSE
-├── README.md
-├── requirements.txt
 ├── app/
-│   ├── __init__.py
-│   ├── dataset.py
 │   ├── main.py
-│   ├── models.py
-│   ├── agents/
-│   │   ├── __init__.py
-│   │   └── agent_system.py
 │   ├── datasets/
-│   │   ├── __init__.py
 │   │   └── movie_dataset.py
 │   ├── models/
-│   │   ├── __init__.py
 │   │   ├── fewshot.py
 │   │   └── rag.py
+│   ├── agents/
+│   │   └── agent_system.py
 │   └── multi_agent/
-│       ├── __init__.py
 │       └── orchestrator.py
-└── llm_redial/
-    ├── read_me.py
-    ├── Tools.py
-    └── LLM_Redial/
-        └── data/
-            ├── Books/
-            │   ├── Conversation.txt
-            │   ├── final_data.jsonl
-            │   ├── item_map.json
-            │   └── user_ids.json
-            ├── Electronics/
-            │   ├── Conversation.txt
-            │   ├── final_data.jsonl
-            │   ├── item_map.json
-            │   └── user_ids.json
-            ├── Movie/
-            │   ├── Conversation.txt
-            │   ├── final_data.jsonl
-            │   ├── item_map.json
-            │   └── user_ids.json
-            └── Sports/
-                ├── Conversation.txt
-                ├── final_data.jsonl
-                ├── item_map.json
-                └── user_ids.json
+├── llm_redial/
+│   ├── Tools.py
+│   ├── read_me.py
+│   └── LLM_Redial/data/Movie/
+├── requirements.txt
+└── README.md
 ```
 
----
+## Approaches implemented
 
-# What each system does
+### Few-shot
 
-## 1. Few-shot Recommender
+Location: `app/models/fewshot.py`
 
-File:
+Uses a small set of example conversations and selects the closest example with TF-IDF cosine similarity. The recommendation attached to that example is returned.
+
+Endpoint:
+
 ```text
-app/models/fewshot.py
-```
-
-### What it does
-- Stores example conversations
-- Uses TF-IDF similarity
-- Finds the closest example dialogue
-- Returns the associated recommendation
-
-### How to verify
-Call:
-```bash
 POST /recommend/fewshot
 ```
 
----
+### RAG
 
-## 2. RAG Recommender
+Location: `app/models/rag.py`
 
-File:
+Indexes the available conversations, retrieves the top-k most similar dialogues, and returns the most common recommended movie among the retrieved examples.
+
+Endpoint:
+
 ```text
-app/models/rag.py
-```
-
-### What it does
-- Builds retrieval index over all conversations
-- Retrieves top-k similar dialogues
-- Uses majority voting over retrieved recommendations
-
-### How to verify
-Call:
-```bash
 POST /recommend/rag
 ```
 
----
+### Agent-based system
 
-## 3. Agent-Based System
+Location: `app/agents/agent_system.py`
 
-File:
+Contains simple agents with different recommendation strategies:
+
+- `SimilarityAgent`
+- `PopularityAgent`
+- `RandomAgent`
+
+Endpoint:
+
 ```text
-app/agents/agent_system.py
-```
-
-### Agents included
-- SimilarityAgent
-- PopularityAgent
-- RandomAgent
-
-### What it does
-- Uses agents independently
-- Agent decides recommendation strategy
-
-### How to verify
-Call:
-```bash
 POST /recommend/agent
 ```
 
----
+### Multi-agent system
 
-## 4. Multi-Agent System
+Location: `app/multi_agent/orchestrator.py`
 
-File:
+Runs multiple agents and combines their outputs with majority voting.
+
+Endpoint:
+
 ```text
-app/multi_agent/orchestrator.py
-```
-
-### What it does
-- Runs multiple agents
-- Combines recommendations
-- Uses majority voting
-
-### How to verify
-Call:
-```bash
 POST /recommend/multi
 ```
 
----
+## Async and performance handling
 
-# Asynchronous Programming & Concurrency
+The FastAPI endpoints are asynchronous and return `StreamingResponse` objects. The response generator yields control back to the event loop while streaming, so multiple requests can be handled concurrently by Uvicorn.
 
-## Was async programming implemented?
-
-Yes.
-
-### Proof
-Inside `app/main.py`:
-- Uses `async def`
-- Uses async generators
-- Uses StreamingResponse
-- Uses non-blocking event loop behavior
-
-Example:
-```python
-async def recommend(...):
-```
-
----
-
-## Was concurrency handled?
-
-Yes.
-
-### How
-The API streams responses asynchronously:
-```python
-await asyncio.sleep(0)
-```
-
-This yields control back to the event loop, allowing:
-- multiple simultaneous requests
-- low latency
-- non-blocking behavior
-
-### Verification
-Run multiple concurrent requests using:
-- Postman
-- curl
-- Locust
-- ApacheBench
-
----
-
-# Prompt Engineering Improvements
-
-## Prompt Change 1 — Explicit Preference Summary
-
-### Improvement
-Add:
-- user likes
-- dislikes
-- genres
-- previous watches
-
-before recommendation generation.
-
-### Why it helps
-Provides better context alignment.
-
-### Example
-```text
-User likes:
-- Sci-fi
-- Psychological thrillers
-
-User dislikes:
-- Slow dramas
-```
-
----
-
-## Prompt Change 2 — Structured Few-shot Examples
-
-### Improvement
-Use structured examples:
+Relevant file:
 
 ```text
-Conversation:
-...
-
-Recommended Movie:
-...
+app/main.py
 ```
 
-### Why it helps
-Teaches the LLM mapping patterns clearly.
+This is intentionally simple for the test scope. For a heavier model, I would move blocking inference into a thread/process pool or use an async queue for batching.
 
-Improves:
-- consistency
-- recommendation accuracy
-- output formatting
+## Setup
 
----
-
-# Instructions to Run the Project
-
-## 1. Create and activate virtual environment
-
-### Windows (PowerShell)
+Create and activate a virtual environment:
 
 ```bash
 python -m venv .venv
-.venv\Scripts\activate
+source .venv/bin/activate   # macOS/Linux
+# .venv\Scripts\activate    # Windows
 ```
 
-### macOS / Linux
-
-```bash
-python3 -m venv .venv
-source .venv/bin/activate
-```
-
----
-
-## 2. Install dependencies
+Install dependencies:
 
 ```bash
 pip install -r requirements.txt
 ```
 
----
+## Dataset location
 
-## 3. Extract dataset
-
-Place the Movie dataset here:
+The app expects the movie dataset here:
 
 ```text
 llm_redial/LLM_Redial/data/Movie
 ```
 
----
+Required files:
 
-## 4. Start FastAPI server
+```text
+Conversation.txt
+final_data.jsonl
+item_map.json
+user_ids.json
+```
+
+The original dataset package also includes `Tools.py` and `read_me.py`. Those are helper/example files from the dataset authors. I did not depend on them directly because the project has its own loader in `app/datasets/movie_dataset.py`.
+
+## Run the API
+
+Create a venv in project root:
+
+```bash
+python -m venv venv
+venv\Scripts\activate     # Activate it
+```
+
+From the project root:
 
 ```bash
 uvicorn app.main:app --reload
 ```
 
----
+Open the API docs:
 
-## 5. Test endpoints
-
-### PowerShell
-
-```bash
-Invoke-RestMethod `
-  -Uri "http://127.0.0.1:8000/recommend/rag" `
-  -Method POST `
-  -ContentType "application/json" `
-  -Body '{"question":"I loved Inception"}'
+```text
+http://127.0.0.1:8000/docs
 ```
 
-### curl (Linux/macOS)
+Health check:
 
 ```bash
-curl -X POST "http://127.0.0.1:8000/recommend/rag?question=I loved Inception"
+curl http://127.0.0.1:8000/health
 ```
 
-Available systems:
+## Example requests
 
-- fewshot
-- rag
-- agent
-- multi
+Few-shot:
 
----
+```bash
+curl -X POST "http://127.0.0.1:8000/recommend/fewshot?question=I%20liked%20Inception%20and%20want%20another%20mind-bending%20movie"
+```
 
-# Dataset Paper Notes
+RAG:
 
-The LLM‑REDIAL paper states:
-- 47.6k dialogues
-- 482k utterances
-- multi-turn conversational recommendation
-- user-centric dialogue generation
-- recommendation consistency with historical interactions
+```bash
+curl -X POST "http://127.0.0.1:8000/recommend/rag?question=I%20enjoyed%20Star%20Wars%20and%20want%20more%20sci-fi"
+```
 
-The dataset was specifically designed for conversational recommender systems research.
+Agent-based:
 
----
+```bash
+curl -X POST "http://127.0.0.1:8000/recommend/agent?question=I%20want%20a%20funny%20family%20movie"
+```
 
-# Final Conclusion
+Multi-agent:
 
-This project successfully implemented:
-- Few-shot CRS
-- RAG CRS
-- Agent-based CRS
-- Multi-agent CRS
-- Async FastAPI serving
-- Concurrent request handling
-- Professional ML/GenAI project structure
-- Prompt engineering improvements
-- Dataset parsing and recommendation pipeline
+```bash
+curl -X POST "http://127.0.0.1:8000/recommend/multi?question=Recommend%20a%20classic%20action%20movie"
+```
 
-All original task requirements were fulfilled.
+## Verifying concurrency
+
+Start the server, then run several requests in parallel:
+
+```bash
+curl -X POST "http://127.0.0.1:8000/recommend/rag?question=I%20liked%20The%20Matrix" &
+curl -X POST "http://127.0.0.1:8000/recommend/agent?question=I%20want%20a%20comedy" &
+curl -X POST "http://127.0.0.1:8000/recommend/multi?question=I%20want%20a%20thriller" &
+wait
+```
+
+The responses should stream independently.
+
+## Prompt changes that can improve recommendation accuracy
+
+These changes are useful when replacing the lightweight baseline with an LLM-backed generator:
+
+1. **Add a short preference summary before the conversation.**
+
+   Example:
+
+   ```text
+   User preferences:
+   - Likes sci-fi and psychological thrillers
+   - Dislikes slow dramas
+   - Recently enjoyed Inception and The Matrix
+   ```
+
+   This gives the model a cleaner signal than asking it to infer everything from the full dialogue.
+
+2. **Use labelled few-shot examples.**
+
+   Example:
+
+   ```text
+   Conversation:
+   User: I enjoyed Star Wars and want another space adventure.
+
+   Recommended movie:
+   Star Wars: The Clone Wars
+   ```
+
+   Clear labels reduce ambiguity and make the expected output format easier to follow.
+
+## Notes and limitations
+
+- TF-IDF was used to keep the project easy to run locally.
+- The current implementation returns movie titles, not long natural-language explanations.
+- The multi-agent setup is intentionally simple, but the structure makes it easy to add stronger agents later.
+- For production, I would add embeddings, a vector database, caching, logging, evaluation metrics, and integration tests.

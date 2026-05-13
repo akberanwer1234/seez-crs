@@ -1,7 +1,7 @@
 """
-Dataset loading utilities for LLM‑Redial movie data.
+Dataset loading utilities for LLM_Redial movie data.
 
-The movie portion of LLM‑Redial is delivered as a set of two files:
+The movie portion of LLM_Redial is delivered as a set of two files:
 
 1. ``Conversation.txt`` — a plain text file containing one conversation per
    index. Each conversation begins with a numeric identifier on its own
