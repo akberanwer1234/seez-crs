@@ -1,35 +1,3 @@
-"""
-Lightweight models for the conversational recommender system without
-external LLM dependencies.
-
-Due to the constraints of the runtime environment (lack of internet and
-unavailable Transformer libraries), the recommenders implemented here
-use classical machine learning techniques to approximate the behaviour
-of few‑shot and retrieval‑augmented generation approaches.
-
-Two recommenders are provided:
-
-1. **FewShotRecommender** – Maintains a small set of example
-   conversations along with their associated recommended movie titles. When
-   asked for a recommendation, it vectorises the input conversation
-   alongside the stored examples using a TF–IDF representation and
-   selects the most similar example. The recommendation from the
-   selected example is returned as the predicted movie. This approximates
-   a few‑shot LLM by directly transferring knowledge from a handful of
-   exemplars.
-
-2. **RAGRecommender** – Builds a TF–IDF index over all available
-   conversation transcripts. For an incoming request, it retrieves the
-   top‑``k`` most similar conversations and aggregates their associated
-   recommended items. The most frequent movie among the retrieved set is
-   chosen and returned. This mimics the retrieval‑augmented paradigm by
-   separating retrieval (nearest neighbour search) from response
-   formulation.
-
-Both classes implement an asynchronous ``recommend`` method to allow
-non‑blocking operation within the FastAPI service.
-"""
-
 from __future__ import annotations
 
 import asyncio
@@ -46,13 +14,6 @@ class BaseRecommender:
 
 
 class FewShotRecommender(BaseRecommender):
-    """Simple few‑shot recommender using TF–IDF similarity.
-
-    Args:
-        examples: A list of tuples ``(conversation_text, rec_titles)``.
-        num_examples: The number of examples to retain. Only the first
-            ``num_examples`` entries from ``examples`` will be used.
-    """
 
     def __init__(self, examples: List[Tuple[str, List[str]]], num_examples: int = 3):
         # Retain the specified number of examples
@@ -76,13 +37,6 @@ class FewShotRecommender(BaseRecommender):
 
 
 class RAGRecommender(BaseRecommender):
-    """Retrieval‑augmented recommender using TF–IDF and majority vote.
-
-    Args:
-        examples: A list of tuples ``(conversation_text, rec_titles)`` for the
-            entire dataset.
-        top_k: Number of nearest neighbours to consider during retrieval.
-    """
 
     def __init__(self, examples: List[Tuple[str, List[str]]], top_k: int = 3):
         self.examples = examples

@@ -1,21 +1,3 @@
-"""Enhanced agent‑based recommender system.
-
-This module defines a preference‑aware agent recommender that
-implements a simple agent architecture without external LLMs.  It
-extracts user preferences from the conversation by looking for
-mentions of known movie titles, retrieves similar conversations from
-the training corpus, scores candidate items with a combination of
-similarity, popularity and preference matching, and returns the
-highest‑scoring movie.  It also generates a brief natural language
-explanation referencing the user's stated preferences.
-
-The design is inspired by agentic systems where different agents are
-responsible for extraction, retrieval, ranking and explanation.  Here
-they are combined into a single class for simplicity.  All heavy
-operations run in a background thread to avoid blocking the event
-loop.
-"""
-
 from __future__ import annotations
 
 import asyncio

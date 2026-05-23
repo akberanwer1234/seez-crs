@@ -1,18 +1,3 @@
-"""
-FastAPI entry point exposing multiple recommendation strategies.
-
-This API provides separate endpoints for different conversational
-recommenders: few‑shot, retrieval‑augmented (RAG), agent‑based and
-multi‑agent. Each endpoint accepts a user question and optional
-conversation history and returns a streamed movie recommendation.
-
-At startup the service loads the LLM‑REDIAL movie dataset, converts
-item IDs to human‑readable titles, computes simple statistics (e.g. item
-frequency) and initialises all model instances. Models use TF–IDF
-representations and simple heuristics to approximate LLM behaviour
-without external dependencies.
-"""
-
 from __future__ import annotations
 
 import asyncio
@@ -113,14 +98,6 @@ async def _stream_response(model_name: str, question: str, history: List[str]):
 
 @app.post("/recommend/{system}")
 async def recommend(system: str, question: str, history: Optional[List[str]] = None):
-    """Recommend a movie using the specified system.
-
-    Parameters
-    ----------
-    system: One of ``fewshot``, ``rag``, ``agent`` or ``multi``.
-    question: Latest user utterance.
-    history: List of previous conversation turns (optional).
-    """
     if history is None:
         history = []
     generator = _stream_response(system, question, history)

@@ -1,25 +1,3 @@
-"""
-Agent‑based recommendation components.
-
-This module defines a simple agent‑based architecture for movie
-recommendation. It consists of multiple agents implementing different
-strategies and a high‑level recommender that delegates to one of these
-agents to produce a suggestion.
-
-Agents:
-
-* ``SimilarityAgent`` – Recommends the movie title whose title is
-  most similar to the current conversation based on TF–IDF cosine
-  similarity.
-* ``PopularityAgent`` – Always returns the most frequently
-  recommended movie across the training dataset.
-* ``RandomAgent`` – Returns a random movie title from the catalogue.
-
-The ``AgentBasedRecommender`` composes these agents. In this
-implementation it delegates solely to ``SimilarityAgent``, but the
-architecture allows for easy extension.
-"""
-
 from __future__ import annotations
 
 import random
@@ -78,12 +56,7 @@ class RandomAgent:
 
 
 class AgentBasedRecommender:
-    """High‑level recommender that delegates to a selected agent.
-
-    In this simple implementation we utilise the ``SimilarityAgent`` to
-    generate a recommendation. Future extensions could select among
-    multiple agents based on context or user preferences.
-    """
+    """High‑level recommender that delegates to a selected agent"""
 
     def __init__(self, similarity_agent: SimilarityAgent) -> None:
         self.similarity_agent = similarity_agent
