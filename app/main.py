@@ -3,18 +3,21 @@ from __future__ import annotations
 import asyncio
 import json
 from pathlib import Path
-from typing import List, Optional
+from typing import List, Optional, Dict
 
 from fastapi import FastAPI, HTTPException
-from fastapi.responses import RedirectResponse, StreamingResponse
+from fastapi.responses import StreamingResponse
 
 from .datasets.movie_dataset import load_movie_dataset
 from .models import FewShotRecommender, RAGRecommender
+from .models.dynamic_fewshot import DynamicFewShotRecommender
+from .models.rag_enhanced import EnhancedRAGRecommender
 from .agents import SimilarityAgent, PopularityAgent, RandomAgent, AgentBasedRecommender
+from .agents.enhanced_agent_system import PreferenceAwareAgentRecommender
 from .multi_agent import MultiAgentRecommender
 
 
-app = FastAPI(title="Seez => LLM‑Redial Conversational Recommender")
+app = FastAPI(title="LLM‑Redial Conversational Recommender")
 
 # Determine dataset directory relative to project root
 DATA_DIR = Path(__file__).resolve().parents[1] / "llm_redial/LLM_Redial/data/Movie"
@@ -64,9 +67,14 @@ rag_model = RAGRecommender(examples, top_k=3)
 agent_model = AgentBasedRecommender(similarity_agent)
 multi_agent_model = MultiAgentRecommender([similarity_agent, popularity_agent, random_agent])
 
-@app.get("/")
-async def root():
-    return RedirectResponse(url="/docs")
+# Instantiate improved models.  These use the full dataset rather
+# than the ``examples`` list because they perform their own
+# preprocessing.  ``dataset`` contains examples with item IDs;
+# ``examples`` contains (text, rec_titles) pairs.  We pass
+# ``dataset`` so the models can access rec_item IDs for weighting.
+dynamic_fewshot_model = DynamicFewShotRecommender(dataset, item_map=ITEM_MAP, n_examples=5)
+enhanced_rag_model = EnhancedRAGRecommender(dataset, item_map=ITEM_MAP, top_k=20)
+preference_agent_model = PreferenceAwareAgentRecommender(dataset, item_map=ITEM_MAP, top_k=20)
 
 
 @app.get("/health")
@@ -75,7 +83,7 @@ async def health() -> dict:
 
 
 async def _stream_response(model_name: str, question: str, history: List[str]):
-    # Select model
+    # Select model based on the provided system name.
     if model_name == "fewshot":
         model = fewshot_model
     elif model_name == "rag":
@@ -84,16 +92,34 @@ async def _stream_response(model_name: str, question: str, history: List[str]):
         model = agent_model
     elif model_name == "multi":
         model = multi_agent_model
+    elif model_name == "dynamic_fewshot":
+        model = dynamic_fewshot_model
+    elif model_name == "enhanced_rag":
+        model = enhanced_rag_model
+    elif model_name == "preference_agent":
+        model = preference_agent_model
     else:
         raise HTTPException(status_code=404, detail=f"Unknown recommender '{model_name}'")
+    # Invoke the model.  Some models return only a title, whereas the
+    # preference agent returns a tuple of (title, explanation).
     try:
-        rec_title = await model.recommend(question, history)
+        result = await model.recommend(question, history)
     except Exception as exc:
-        raise HTTPException(status_code=500, detail=f"Model error: {exc}")
-    # Stream the title character by character
+        yield f"\n[ERROR] Model error: {exc}"
+        return
+    if isinstance(result, tuple):
+        rec_title, explanation = result
+    else:
+        rec_title, explanation = result, None
+    # Stream the title
     for ch in rec_title:
         yield ch
         await asyncio.sleep(0)
+    # If an explanation is provided, stream it on a new line
+    if explanation:
+        for ch in "\n" + explanation:
+            yield ch
+            await asyncio.sleep(0)
 
 
 @app.post("/recommend/{system}")
