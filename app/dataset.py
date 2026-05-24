@@ -4,7 +4,6 @@ import json
 from pathlib import Path
 from typing import Dict, List, Optional, Tuple
 
-
 def _parse_conversations(conversation_path: Path, max_conversations: Optional[int] = None) -> Dict[int, str]:
     conversations: Dict[int, str] = {}
     current_id: Optional[int] = None

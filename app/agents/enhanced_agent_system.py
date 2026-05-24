@@ -9,14 +9,6 @@ from sklearn.metrics.pairwise import cosine_similarity
 
 
 class PreferenceAwareAgentRecommender:
-    """Preference‑aware conversational recommender.
-
-    Args:
-        train_examples: List of examples for training.  Each example
-            must contain ``'text'`` and ``'rec_items'``.
-        item_map: Mapping from item identifiers to movie titles.
-        top_k: Number of similar conversations to retrieve.
-    """
 
     def __init__(self, train_examples: List[Dict[str, object]], item_map: Dict[str, str], top_k: int = 20) -> None:
         self.item_map = item_map

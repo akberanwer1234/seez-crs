@@ -9,7 +9,6 @@ from sklearn.metrics.pairwise import cosine_similarity
 
 
 class SimilarityAgent:
-    """Agent recommending the most similar movie title to the conversation."""
 
     def __init__(self, item_titles: List[str]) -> None:
         self.item_titles = item_titles
@@ -25,7 +24,6 @@ class SimilarityAgent:
 
 
 class PopularityAgent:
-    """Agent recommending the globally most popular movie."""
 
     def __init__(self, item_frequencies: Dict[str, int], item_map: Dict[str, str]) -> None:
         self.item_frequencies = item_frequencies
@@ -44,7 +42,6 @@ class PopularityAgent:
 
 
 class RandomAgent:
-    """Agent recommending a random movie title."""
 
     def __init__(self, item_titles: List[str]) -> None:
         self.item_titles = item_titles
@@ -56,7 +53,6 @@ class RandomAgent:
 
 
 class AgentBasedRecommender:
-    """High‑level recommender that delegates to a selected agent"""
 
     def __init__(self, similarity_agent: SimilarityAgent) -> None:
         self.similarity_agent = similarity_agent

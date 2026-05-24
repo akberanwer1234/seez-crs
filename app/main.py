@@ -12,6 +12,7 @@ from .datasets.movie_dataset import load_movie_dataset
 from .models import FewShotRecommender, RAGRecommender
 from .models.dynamic_fewshot import DynamicFewShotRecommender
 from .models.rag_enhanced import EnhancedRAGRecommender
+from .models.semantic_lsa import LSAFewShotRecommender, LSARAGRecommender
 from .agents import SimilarityAgent, PopularityAgent, RandomAgent, AgentBasedRecommender
 from .agents.enhanced_agent_system import PreferenceAwareAgentRecommender
 from .multi_agent import MultiAgentRecommender
@@ -76,6 +77,10 @@ dynamic_fewshot_model = DynamicFewShotRecommender(dataset, item_map=ITEM_MAP, n_
 enhanced_rag_model = EnhancedRAGRecommender(dataset, item_map=ITEM_MAP, top_k=20)
 preference_agent_model = PreferenceAwareAgentRecommender(dataset, item_map=ITEM_MAP, top_k=20)
 
+# Semantic LSA models
+lsa_fewshot_model = LSAFewShotRecommender(dataset, item_map=ITEM_MAP, n_examples=5, n_components=100)
+lsa_rag_model = LSARAGRecommender(dataset, item_map=ITEM_MAP, top_k=20, n_components=100)
+
 
 @app.get("/health")
 async def health() -> dict:
@@ -98,6 +103,10 @@ async def _stream_response(model_name: str, question: str, history: List[str]):
         model = enhanced_rag_model
     elif model_name == "preference_agent":
         model = preference_agent_model
+    elif model_name == "lsa_fewshot":
+        model = lsa_fewshot_model
+    elif model_name == "lsa_rag":
+        model = lsa_rag_model
     else:
         raise HTTPException(status_code=404, detail=f"Unknown recommender '{model_name}'")
     # Invoke the model.  Some models return only a title, whereas the
@@ -105,7 +114,8 @@ async def _stream_response(model_name: str, question: str, history: List[str]):
     try:
         result = await model.recommend(question, history)
     except Exception as exc:
-        yield f"\n[ERROR] Model error: {exc}"
+        # raise HTTPException(status_code=500, detail=f"Model error: {exc}")
+        yield json.dumps({"error": f"Model error: {exc}"}) + "\n"
         return
     if isinstance(result, tuple):
         rec_title, explanation = result
@@ -124,6 +134,47 @@ async def _stream_response(model_name: str, question: str, history: List[str]):
 
 @app.post("/recommend/{system}")
 async def recommend(system: str, question: str, history: Optional[List[str]] = None):
+    """Stream a recommendation using the specified system.
+
+    The ``system`` path parameter selects which recommendation
+    algorithm to use.  Supported values include:
+
+    * ``fewshot`` – Fixed few‑shot baseline (original implementation).
+    * ``rag`` – Basic retrieval‑augmented baseline (original).
+    * ``agent`` – Basic similarity agent baseline (original).
+    * ``multi`` – Basic multi‑agent baseline (original).
+    * ``dynamic_fewshot`` – Dynamic few‑shot model that retrieves
+      similar conversations at runtime and aggregates their
+      recommendations.
+    * ``enhanced_rag`` – Enhanced retrieval‑augmented model that
+      retrieves a larger evidence pool and scores candidate items by
+      similarity and popularity.
+    * ``preference_agent`` – Preference‑aware agent that extracts
+      mentioned movie titles, retrieves similar conversations,
+      scores candidates with preference bonuses and returns an
+      explanation.
+    * ``lsa_fewshot`` – LSA dynamic few‑shot model that projects
+      conversations into a latent semantic space via truncated SVD
+      before retrieving nearest neighbours and aggregating their
+      recommendations.
+    * ``lsa_rag`` – LSA retrieval‑augmented model that collects a
+      larger set of neighbours in the latent semantic space and
+      scores candidate items by similarity and popularity.
+
+    The ``question`` parameter should contain the latest user
+    utterance or the entire conversation text.  The ``history``
+    parameter is reserved for future use; pass an empty list for now.
+
+    Args:
+        system: Name of the recommendation system.
+        question: User utterance or full conversation text.
+        history: Optional list of previous turns (unused currently).
+
+    Returns:
+        A streaming plain‑text response containing the recommended
+        movie title.  For the ``preference_agent`` system the
+        explanation follows on the next line.
+    """
     if history is None:
         history = []
     generator = _stream_response(system, question, history)

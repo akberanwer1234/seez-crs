@@ -10,12 +10,13 @@ from typing import Dict, List, Tuple
 from ..datasets.movie_dataset import load_movie_dataset
 from ..models.dynamic_fewshot import DynamicFewShotRecommender
 from ..models.rag_enhanced import EnhancedRAGRecommender
+from ..models.semantic_lsa import LSAFewShotRecommender, LSARAGRecommender
 from ..agents.enhanced_agent_system import PreferenceAwareAgentRecommender
 from .metrics import compute_metrics
 
 
 def split_dataset(examples: List[Dict[str, object]], test_ratio: float = 0.2, seed: int = 42) -> Tuple[List[Dict[str, object]], List[Dict[str, object]]]:
-    """Split a list of examples into train and test sets."""
+
     rng = random.Random(seed)
     shuffled = examples.copy()
     rng.shuffle(shuffled)
@@ -26,7 +27,7 @@ def split_dataset(examples: List[Dict[str, object]], test_ratio: float = 0.2, se
 
 
 def evaluate_model(name: str, model, test_examples: List[Dict[str, object]], history_length: int = 3) -> Dict[str, float]:
-    """Evaluate a recommendation model on a list of test examples."""
+
     metrics: Dict[str, List[float]] = {}
     for ex in test_examples:
         conversation_text: str = ex["text"]
@@ -81,6 +82,7 @@ def main() -> None:
     parser.add_argument("--data_dir", type=str, required=True, help="Path to the Movie data directory containing Conversation.txt and final_data.jsonl")
     parser.add_argument("--test_ratio", type=float, default=0.2, help="Fraction of dataset used for testing (default 0.2)")
     parser.add_argument("--seed", type=int, default=42, help="Random seed for the train/test split")
+    parser.add_argument("--lsa_components", type=int, default=100, help="Number of latent SVD dimensions for LSA models")
     args = parser.parse_args()
     # Load dataset
     examples = load_movie_dataset(args.data_dir)
@@ -96,12 +98,18 @@ def main() -> None:
     rag_model = EnhancedRAGRecommender(train, item_map=item_map, top_k=20)
     # Agent
     agent_model = PreferenceAwareAgentRecommender(train, item_map=item_map, top_k=20)
+    # LSA few-shot
+    lsa_fewshot_model = LSAFewShotRecommender(train, item_map=item_map, n_examples=5, n_components=args.lsa_components)
+    # LSA RAG
+    lsa_rag_model = LSARAGRecommender(train, item_map=item_map, top_k=20, n_components=args.lsa_components)
     # Evaluate models
     results: Dict[str, Dict[str, float]] = {}
     for name, model in [
         ("dynamic_fewshot", fewshot_model),
         ("enhanced_rag", rag_model),
         ("preference_aware_agent", agent_model),
+        ("lsa_fewshot", lsa_fewshot_model),
+        ("lsa_rag", lsa_rag_model),
     ]:
         print(f"Evaluating {name}...", flush=True)
         scores = evaluate_model(name, model, test)

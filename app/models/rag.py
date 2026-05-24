@@ -6,7 +6,6 @@ from typing import List, Tuple
 from sklearn.feature_extraction.text import TfidfVectorizer
 from sklearn.metrics.pairwise import cosine_similarity
 
-
 class RAGRecommender:
     def __init__(self, examples: List[Tuple[str, List[str]]], top_k: int = 3) -> None:
         self.examples = examples

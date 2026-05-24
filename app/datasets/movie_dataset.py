@@ -4,9 +4,8 @@ import json
 from pathlib import Path
 from typing import Dict, List, Optional
 
-
 def _parse_conversations(conversation_path: Path, max_conversations: Optional[int] = None) -> Dict[int, str]:
-    """Parse conversations from Conversation.txt."""
+
     conversations: Dict[int, str] = {}
     current_id: Optional[int] = None
     current_lines: List[str] = []
@@ -39,7 +38,7 @@ def _parse_conversations(conversation_path: Path, max_conversations: Optional[in
 
 
 def _parse_final_data(final_data_path: Path) -> Dict[int, List[str]]:
-    """Parse conversation metadata from final_data.jsonl"""
+
     mapping: Dict[int, List[str]] = {}
     with open(final_data_path, "r", encoding="utf-8") as f:
         for line in f:
@@ -58,7 +57,7 @@ def _parse_final_data(final_data_path: Path) -> Dict[int, List[str]]:
 
 
 def load_movie_dataset(data_dir: str, max_conversations: Optional[int] = None) -> List[Dict[str, object]]:
-    """Load the movie portion of LLM‑REDIAL."""
+
     data_path = Path(data_dir)
     conversation_path = data_path / "Conversation.txt"
     final_data_path = data_path / "final_data.jsonl"
